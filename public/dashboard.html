@@ -25,6 +25,9 @@
       <div class="nav-item" onclick="switchTab('settings')" id="nav-settings">
         <span class="icon">⚙️</span> Settings
       </div>
+      <div class="nav-item" onclick="switchTab('help')" id="nav-help">
+        <span class="icon">📖</span> Help / Guide
+      </div>
     </nav>
     <div class="sidebar-footer">
       <button class="btn btn-secondary btn-full btn-sm" onclick="logout()">Sign Out</button>
@@ -145,6 +148,88 @@
       </div>
     </div>
 
+    <!-- ── HELP / GUIDE TAB ── -->
+    <div id="tab-help" class="hidden">
+      <div class="dash-top"><h1>Help / Guide</h1></div>
+
+      <div class="card guide" style="max-width:760px;">
+        <p class="guide-intro">A simple guide to using this app. You can do everything yourself from any computer or phone — nothing needs to be installed.</p>
+
+        <h3>1. The four tabs</h3>
+        <ul>
+          <li><b>Students</b> — add students, copy their survey link, and see who has finished.</li>
+          <li><b>Questions</b> — add, change, remove, or reorder the questions.</li>
+          <li><b>Settings</b> — change your password and download (back up) your data.</li>
+          <li><b>Help / Guide</b> — this page.</li>
+        </ul>
+
+        <h3>2. Send the survey to a student</h3>
+        <ol>
+          <li>Go to <b>Students</b> → click <b>“+ Add Student”</b>.</li>
+          <li>Type the student’s name and email, then save.</li>
+          <li>On that student’s row, click <b>“Copy”</b> to copy their personal link.</li>
+          <li>Paste the link into an email and send it to the student.</li>
+          <li>They open it on any device and fill it in. Their answers arrive automatically.</li>
+        </ol>
+        <p class="guide-note">Each student has their own private link. Only you can see the answers.</p>
+
+        <h3>3. See who has finished</h3>
+        <p>In <b>Students</b>, each person shows <span class="badge badge-success">Completed</span> or <span class="badge badge-warning">Pending</span>. Click <b>“View”</b> to read a student’s answers, and <b>“Print”</b> in that window to print or save them as a PDF.</p>
+
+        <h3>4. Create a new question</h3>
+        <ol>
+          <li>Go to the <b>Questions</b> tab and click <b>“+ Add Question”</b>.</li>
+          <li><b>Section</b> — the group it belongs to (e.g. <i>Medical</i>). Type a new name to start a new section, or pick an existing one.</li>
+          <li><b>Question label</b> — the question the student reads (e.g. <i>“Do you have health insurance?”</i>).</li>
+          <li><b>Answer type</b> — choose how the student answers:
+            <ul>
+              <li><b>Short Text / Long Text</b> — typing</li>
+              <li><b>Yes / No</b> — two buttons (see section 5 below)</li>
+              <li><b>Dropdown</b> — a list you provide (separate the choices with the <b>|</b> symbol, e.g. <code>Active|Pending|None</code>)</li>
+              <li><b>Date, Email, Phone, Number</b> — special boxes for those values</li>
+            </ul>
+          </li>
+          <li><b>Required</b> — tick this if the student must answer it.</li>
+          <li>Click <b>“Add Question”</b>. It saves right away and students see it immediately.</li>
+        </ol>
+
+        <div class="guide-highlight">
+          <h3 style="margin-top:0;">5. Yes / No questions &amp; “only show if…” (skip logic)</h3>
+          <p>A <b>Yes / No</b> question shows the student two buttons. The useful part: you can make another question <b>appear only when the answer is Yes or No</b> — so students are not bothered with questions that do not apply to them.</p>
+          <p><b>Real example already in your survey:</b></p>
+          <ul>
+            <li>“<i>Birth Certificate Obtained?</i>” → <b>Yes / No</b></li>
+            <li>If the student answers <b>No</b>, a follow-up question “<i>Is it on its way?</i>” appears.</li>
+            <li>If they answer <b>Yes</b>, that follow-up stays hidden — nothing extra to fill in.</li>
+          </ul>
+          <p><b>How to set this up on a new question:</b></p>
+          <ol>
+            <li>First make sure the main question (the one they answer first) is a <b>Yes / No</b> type.</li>
+            <li>Add or edit the <b>follow-up</b> question.</li>
+            <li>In its window, find <b>“🔀 Conditional Display”</b>.</li>
+            <li>Under <b>“Show this question only if…”</b>, choose the Yes/No question it depends on.</li>
+            <li>Under <b>“…is answered:”</b>, choose <b>Yes</b> or <b>No</b> — the answer that should make this question appear.</li>
+            <li>Save. Now the follow-up only shows when that condition is met.</li>
+          </ol>
+          <p class="guide-note" style="margin-bottom:0;">Tip: you can chain them — a question can depend on a follow-up, which depends on another. To turn a condition off, set “Show this question only if…” back to <b>“Always show”</b>.</p>
+        </div>
+
+        <h3>6. Reorder sections &amp; questions</h3>
+        <p>In <b>Questions</b>: drag the <b>grip handle</b> (the dotted icon on the left), or use the <b>up/down arrow buttons</b> — for a whole section or a single question. Keeping related questions together makes the survey easier for students. Changes save automatically.</p>
+
+        <h3>7. Back up your data</h3>
+        <p>In <b>Settings</b> → <b>“Export &amp; Backup Data”</b>: download a full <b>JSON</b> backup, an <b>Excel</b> spreadsheet, or a <b>PDF</b> of all completed students. It is a good habit to download a backup now and then.</p>
+
+        <h3>8. Good to know</h3>
+        <ul>
+          <li>The web address never changes and works even when your computer is off.</li>
+          <li>Only you can see the answers — they are behind your password.</li>
+          <li>On the free plan, if the site is unused for ~15 minutes it “sleeps”; the next visit may take ~30 seconds to wake up. This is normal.</li>
+          <li>Change your password anytime in <b>Settings → Change Password</b>.</li>
+        </ul>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -158,6 +243,9 @@
   </button>
   <button class="bottom-nav-item" onclick="switchTab('settings')" id="bn-settings">
     <span class="bn-icon">⚙️</span> Settings
+  </button>
+  <button class="bottom-nav-item" onclick="switchTab('help')" id="bn-help">
+    <span class="bn-icon">📖</span> Help
   </button>
 </nav>
 
@@ -331,7 +419,7 @@ async function api(url, method = 'GET', body = null) {
 
 // ── Tab Switching ──────────────────────────────────────────────────────────
 function switchTab(tab) {
-  ['students','questions','settings'].forEach(t => {
+  ['students','questions','settings','help'].forEach(t => {
     document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
     document.getElementById(`nav-${t}`)?.classList.toggle('active', t === tab);
     document.getElementById(`bn-${t}`)?.classList.toggle('active', t === tab);

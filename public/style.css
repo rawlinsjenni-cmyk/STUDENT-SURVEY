@@ -333,6 +333,27 @@ tr:hover td { background: #fafafa; }
 /* Inactive question */
 .q-item.inactive { opacity: .45; }
 
+/* ── Help / Guide page ── */
+.guide { line-height: 1.6; font-size: 14.5px; color: var(--text); }
+.guide .guide-intro { font-size: 15px; color: var(--text-muted); margin-bottom: 18px; }
+.guide h3 {
+  color: var(--primary); font-size: 16px; margin: 22px 0 8px;
+  padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+.guide ul, .guide ol { padding-left: 22px; margin: 6px 0; }
+.guide li { margin-bottom: 6px; }
+.guide ul ul, .guide ol ul { margin-top: 6px; }
+.guide code {
+  background: #f0f0f0; padding: 1px 6px; border-radius: 4px;
+  font-family: Consolas, Menlo, monospace; font-size: 13px;
+}
+.guide .guide-note { font-size: 13px; color: var(--text-muted); font-style: italic; }
+.guide .guide-highlight {
+  background: #fdf6f6; border: 1px solid #e7c9c9; border-left: 4px solid var(--primary);
+  border-radius: 8px; padding: 16px 18px; margin: 20px 0;
+}
+.guide .guide-highlight h3 { border-bottom: none; }
+
 /* ── Reordering (sections + questions) ── */
 .section-card { margin-bottom: 16px; }
 .section-head {
