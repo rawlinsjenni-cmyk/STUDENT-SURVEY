@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Student Service Form</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:40px;">
+  <div class="spinner"></div>
+  <p class="text-muted">Loading your form…</p>
+</div>
+
+<!-- Error -->
+<div id="error-screen" class="hidden" style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:40px;text-align:center;">
+  <div>
+    <div style="font-size:48px;margin-bottom:16px;">❌</div>
+    <h2 style="margin-bottom:8px;">Link Not Found</h2>
+    <p class="text-muted" id="error-msg">This survey link is invalid or has expired.</p>
+  </div>
+</div>
+
+<!-- Already Completed -->
+<div id="done-screen" class="hidden">
+  <div class="survey-header">
+    <h1>Student Service Form</h1>
+    <p>The Salvation Army</p>
+  </div>
+  <div class="survey-body">
+    <div class="card text-center" style="padding:40px 20px;">
+      <div style="font-size:50px;margin-bottom:16px;">✅</div>
+      <h2 id="done-name" style="margin-bottom:8px;"></h2>
+      <p class="text-muted">You have already completed this form. Thank you!</p>
+      <p class="text-muted" style="margin-top:8px;font-size:13px;">If you need to make changes, please contact your case manager.</p>
+    </div>
+    <!-- Read-only response summary -->
+    <div id="done-responses" style="margin-top:20px;"></div>
+  </div>
+</div>
+
+<!-- Survey Form -->
+<div id="form-wrap" class="hidden">
+  <div class="survey-header">
+    <h1>Student Service Form</h1>
+    <p id="student-greeting"></p>
+  </div>
+  <div class="survey-body" id="survey-body"></div>
+  <div class="survey-footer">
+    <button class="btn btn-primary" id="submit-btn" onclick="submitSurvey()">Submit Form</button>
+  </div>
+</div>
+
+<!-- Thank You -->
+<div id="thanks-screen" class="hidden">
+  <div class="survey-header">
+    <h1>Student Service Form</h1>
+    <p>The Salvation Army</p>
+  </div>
+  <div class="survey-body">
+    <div class="thank-you">
+      <div class="check">✓</div>
+      <h2>Form Submitted!</h2>
+      <p>Thank you for completing the Student Service Form.<br>Your case manager will review your responses.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const token = location.pathname.split('/s/')[1];
+let surveyData = null;
+
+async function init() {
+  try {
+    const res = await fetch(`/api/survey/${token}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      show('error-screen');
+      document.getElementById('error-msg').textContent = err.error || 'Invalid survey link.';
+      return;
+    }
+    surveyData = await res.json();
+    const { student, questions, existing } = surveyData;
+
+    if (student.completed) {
+      show('done-screen');
+      document.getElementById('done-name').textContent = `Hi, ${student.name}!`;
+      renderReadOnly(questions, existing);
+    } else {
+      show('form-wrap');
+      document.getElementById('student-greeting').textContent = `Hi ${student.name} — please fill out the form below.`;
+      renderForm(questions);
+    }
+  } catch (e) {
+    show('error-screen');
+  }
+}
+
+function show(id) {
+  document.getElementById('loading').style.display = 'none';
+  ['error-screen','done-screen','form-wrap','thanks-screen'].forEach(i => {
+    const el = document.getElementById(i);
+    if (el) el.classList.add('hidden');
+  });
+  const target = document.getElementById(id);
+  if (target) { target.classList.remove('hidden'); target.style.display = ''; }
+}
+
+function groupBySection(questions) {
+  const map = new Map();
+  for (const q of questions) {
+    if (!map.has(q.section)) map.set(q.section, []);
+    map.get(q.section).push(q);
+  }
+  return map;
+}
+
+function renderForm(questions) {
+  const body = document.getElementById('survey-body');
+  body.innerHTML = '';
+  const sections = groupBySection(questions);
+  sections.forEach((qs, section) => {
+    const card = document.createElement('div');
+    card.className = 'section-card';
+    card.innerHTML = `<div class="section-title">${section}</div><div class="section-body" id="sec-${CSS.escape(section)}"></div>`;
+    body.appendChild(card);
+    const secBody = card.querySelector('.section-body');
+    for (const q of qs) secBody.appendChild(buildField(q));
+  });
+
+  // Re-evaluate conditional questions whenever any answer changes
+  body.addEventListener('change', evaluateConditionals);
+  body.addEventListener('input', evaluateConditionals);
+  evaluateConditionals();
+}
+
+function buildField(q) {
+  const group = document.createElement('div');
+  group.className = 'form-group';
+  const labelHtml = `<label for="q${q.id}">${q.label}${q.required ? '<span class="req">*</span>' : ''}</label>`;
+
+  let input = '';
+  if (q.type === 'yes_no') {
+    input = `
+      <div class="yes-no-group">
+        <input type="radio" name="q${q.id}" id="q${q.id}_y" value="Yes">
+        <label for="q${q.id}_y" class="yes-label">Yes</label>
+        <input type="radio" name="q${q.id}" id="q${q.id}_n" value="No">
+        <label for="q${q.id}_n" class="no-label">No</label>
+      </div>`;
+  } else if (q.type === 'select') {
+    const opts = (q.options || '').split('|').map(o => `<option value="${o}">${o}</option>`).join('');
+    input = `<select id="q${q.id}" name="q${q.id}"><option value="">-- Select --</option>${opts}</select>`;
+  } else if (q.type === 'textarea') {
+    input = `<textarea id="q${q.id}" name="q${q.id}" placeholder="${q.placeholder || ''}"></textarea>`;
+  } else {
+    input = `<input type="${q.type}" id="q${q.id}" name="q${q.id}" placeholder="${q.placeholder || ''}">`;
+  }
+
+  group.innerHTML = labelHtml + input;
+  group.dataset.qid = q.id;
+  group.dataset.required = q.required;
+  group.dataset.type = q.type;
+  if (q.depends_on) {
+    group.dataset.dependsOn = q.depends_on;
+    group.dataset.dependsValue = q.depends_value || '';
+  }
+  return group;
+}
+
+// ── Read / clear a field's value (shared by validation + conditional logic) ──
+function getGroupValue(g) {
+  const qid = g.dataset.qid, type = g.dataset.type;
+  if (type === 'yes_no') {
+    const checked = g.querySelector(`input[name="q${qid}"]:checked`);
+    return checked ? checked.value : '';
+  }
+  if (type === 'select')   return g.querySelector('select')?.value || '';
+  if (type === 'textarea') return g.querySelector('textarea')?.value || '';
+  return g.querySelector('input')?.value || '';
+}
+
+function clearGroup(g) {
+  const type = g.dataset.type;
+  if (type === 'yes_no') {
+    g.querySelectorAll('input[type="radio"]').forEach(r => { r.checked = false; });
+  } else if (type === 'select') {
+    const s = g.querySelector('select'); if (s) s.value = '';
+  } else if (type === 'textarea') {
+    const t = g.querySelector('textarea'); if (t) t.value = '';
+  } else {
+    const i = g.querySelector('input'); if (i) i.value = '';
+  }
+}
+
+// ── Show/hide conditional questions based on current answers ─────────────────
+// Processed in DOM order; since conditions point at earlier questions, hidden
+// parents are already cleared by the time we evaluate their children (chaining).
+function evaluateConditionals() {
+  const groups = document.querySelectorAll('#survey-body .form-group[data-qid]');
+  groups.forEach(g => {
+    const dep = g.dataset.dependsOn;
+    if (!dep) return;
+    const need = g.dataset.dependsValue;
+    const depGroup = document.querySelector(`#survey-body .form-group[data-qid="${dep}"]`);
+    const actual = depGroup ? getGroupValue(depGroup) : '';
+    const visible = (actual === need);
+    g.style.display = visible ? '' : 'none';
+    if (!visible) clearGroup(g);
+  });
+}
+
+function renderReadOnly(questions, existing) {
+  const container = document.getElementById('done-responses');
+  const sections = groupBySection(questions);
+  sections.forEach((qs, section) => {
+    const div = document.createElement('div');
+    div.className = 'card response-section';
+    div.innerHTML = `<h4>${section}</h4>`;
+    for (const q of qs) {
+      const answer = existing[q.id] || '—';
+      const row = document.createElement('div');
+      row.className = 'response-row';
+      row.innerHTML = `<span class="response-q">${q.label}</span><span class="response-a">${answer}</span>`;
+      div.appendChild(row);
+    }
+    container.appendChild(div);
+  });
+}
+
+async function submitSurvey() {
+  const btn = document.getElementById('submit-btn');
+  const groups = document.querySelectorAll('#survey-body .form-group[data-qid]');
+  const responses = {};
+  let hasError = false;
+
+  // Remove previous errors
+  document.querySelectorAll('.field-error').forEach(e => e.remove());
+  document.querySelectorAll('.field-invalid').forEach(e => e.classList.remove('field-invalid'));
+
+  for (const g of groups) {
+    const qid = g.dataset.qid;
+    const required = g.dataset.required === '1';
+
+    // Skip questions hidden by conditional logic — no answer needed
+    if (g.style.display === 'none') {
+      responses[qid] = '';
+      continue;
+    }
+
+    const value = getGroupValue(g);
+
+    if (required && !value.trim()) {
+      hasError = true;
+      const err = document.createElement('div');
+      err.className = 'field-error';
+      err.style.cssText = 'color:#e74c3c;font-size:13px;margin-top:4px;';
+      err.textContent = 'This field is required.';
+      g.appendChild(err);
+      if (!hasError || !document.querySelector('.field-error:first-of-type')) {
+        g.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+    responses[qid] = value;
+  }
+
+  if (hasError) {
+    const firstErr = document.querySelector('.field-error');
+    if (firstErr) firstErr.closest('.form-group').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  try {
+    const res = await fetch(`/api/survey/${token}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ responses })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      show('thanks-screen');
+      window.scrollTo(0, 0);
+    } else {
+      alert(data.error || 'Submission failed. Please try again.');
+      btn.disabled = false;
+      btn.textContent = 'Submit Form';
+    }
+  } catch {
+    alert('Network error. Please check your connection and try again.');
+    btn.disabled = false;
+    btn.textContent = 'Submit Form';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

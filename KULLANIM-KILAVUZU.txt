@@ -1,0 +1,115 @@
+========================================================
+   STUDENT SURVEY APP — KULLANIM KILAVUZU
+   (Salvation Army - Student Service Form)
+========================================================
+
+------------------------------------------------------
+1) UYGULAMAYI BASLATMA
+------------------------------------------------------
+- Masaustundeki "StudentSurveyApp" klasorunu ac.
+- "start.bat" dosyasina CIFT TIKLA.
+- Siyah bir pencere acilir ve "running on port 3000" yazar.
+- BU PENCEREYI ACIK BIRAK (kapatirsan uygulama durur).
+
+Uygulamayi durdurmak icin: siyah pencerede Ctrl+C bas veya pencereyi kapat.
+
+
+------------------------------------------------------
+2) YONETICI (ADMIN) PANELI
+------------------------------------------------------
+Tarayicida su adresi ac:
+    http://localhost:3000/admin
+
+Ilk giris bilgileri:
+    Kullanici adi : admin
+    Sifre         : admin123
+
+>> ILK GIRISTEN SONRA: "Settings" sekmesinden sifreni MUTLAKA degistir.
+
+Panelde 3 sekme var:
+  - Students  : Ogrenci ekle, link kopyala, kim tamamladi gor, cevaplari goruntule/yazdir
+  - Questions : Soru ekle / duzenle / sil / sirala
+  - Settings  : Sifre degistir, veri disa aktar (yedek/PDF/Excel)
+
+
+------------------------------------------------------
+3) OGRENCIYE ANKET GONDERME
+------------------------------------------------------
+1. "Students" sekmesinde "+ Add Student" ile ogrenciyi ekle (ad + e-posta).
+2. Ogrencinin satirindaki "Copy" butonuyla linkini kopyala.
+3. Bu linki e-posta ile ogrenciye gonder.
+4. Ogrenci linki telefon veya bilgisayardan acip doldurur.
+5. Doldurunca durumu otomatik "Completed" olur.
+
+NOT: Her ogrencinin linki kendine ozeldir. Cevaplari yalnizca sen gorursun.
+
+
+------------------------------------------------------
+4) SORULARI DUZENLEME
+------------------------------------------------------
+"Questions" sekmesi:
+  - "+ Add Question" : yeni soru ekle
+  - "Edit" / "Delete": soruyu duzenle / sil
+  - Siralama : ⠿ tutamacindan surukle YA DA ▲ ▼ oklariyla tasi
+               (hem bolumun tamamini hem tek soruyu tasiyabilirsin)
+  - Kosullu soru: "Conditional Display" ile bir soruyu yalnizca
+                  baska bir Yes/No sorusunun cevabina gore goster.
+
+
+------------------------------------------------------
+5) VERIYI KAYDETME / DISA AKTARMA
+------------------------------------------------------
+"Settings" sekmesi > "Export & Backup Data":
+  - JSON  : Tam yedek. ILERIDE KULLANIM ve ANALIZ icin en iyi format.
+            Duzenli olarak indir ve guvenli bir yerde sakla.
+  - Excel : Tablo (her ogrenci bir satir). Excel'de acilir.
+  - PDF   : Tum tamamlanmis ogrencilerin raporu. Yazdir penceresinde
+            "PDF olarak kaydet" secebilirsin.
+
+Tek bir ogrenciyi yazdirmak: Students > o ogrencide "View" > "Print".
+
+
+------------------------------------------------------
+6) VERILER NEREDE TUTULUYOR?
+------------------------------------------------------
+Tum veriler su dosyada:
+    StudentSurveyApp\db\data.json
+
+Bu dosyayi kopyalayarak yedek alabilirsin.
+Geri yuklemek icin: yedek "data.json" dosyasini ayni klasore koy
+(uygulama kapaliyken) ve uygulamayi yeniden baslat.
+
+
+------------------------------------------------------
+7) INTERNETE ACMA (ogrenciler telefondan acsin)
+------------------------------------------------------
+- Sadece kendi bilgisayarinda calistirmak icin : "start.bat"
+- Ogrencilerin internetten erisebilmesi icin    : "INTERNETTE-BASLAT.bat"
+
+"INTERNETTE-BASLAT.bat" dosyasina cift tikla:
+  - Sunucuyu ve internet baglantisini (tunnel) otomatik baslatir.
+  - Ekranda yesil renkte bir adres gosterir, ornegin:
+        https://xxxx-xxxx.trycloudflare.com
+  - ISTE BU LINKI ogrencilere gonder. Admin icin sonuna /admin ekle.
+
+ONEMLI NOTLAR:
+  - Acilan pencereleri KAPATMA. Bilgisayar acik kaldigi surece link calisir.
+  - Bilgisayari kapatip acinca dosyaya tekrar cift tikla; YENI adres olusur
+    (adres her seferinde degisir). Yeni adresi ogrencilere tekrar gondermen
+    gerekir.
+  - KALICI ve hep ayni kalan bir adres istiyorsan (bilgisayar kapali olsa
+    bile calissin), gercek bir hosting'e kurmak gerekir. Bunun icin
+    GELISTIRICI-NOTLARI.md > "INTERNETE YAYINLAMA" bolumune bak.
+
+
+------------------------------------------------------
+8) SORUN GIDERME
+------------------------------------------------------
+- "Link calismiyor / ogrenci acamiyor":
+    "INTERNETTE-BASLAT.bat" calisiyor mu kontrol et. Pencereler kapanmissa
+    tekrar cift tikla (yeni adres olusur).
+
+- "start.bat hata veriyor":
+    Node.js yuklu olmali. https://nodejs.org adresinden LTS surumunu kur.
+
+========================================================

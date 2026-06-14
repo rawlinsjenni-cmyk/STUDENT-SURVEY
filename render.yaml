@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: student-survey
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: MONGODB_URI
+        sync: false        # set this in the Render dashboard (your MongoDB Atlas connection string)
+      - key: SESSION_SECRET
+        generateValue: true

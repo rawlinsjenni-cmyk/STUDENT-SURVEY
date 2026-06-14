@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard – Student Survey</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<div class="dash-layout">
+  <!-- Sidebar (desktop) -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <h2>Student Survey</h2>
+      <p>Admin Panel</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="switchTab('students')" id="nav-students">
+        <span class="icon">👥</span> Students
+      </div>
+      <div class="nav-item" onclick="switchTab('questions')" id="nav-questions">
+        <span class="icon">❓</span> Questions
+      </div>
+      <div class="nav-item" onclick="switchTab('settings')" id="nav-settings">
+        <span class="icon">⚙️</span> Settings
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn btn-secondary btn-full btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="dash-main">
+
+    <!-- ── STUDENTS TAB ── -->
+    <div id="tab-students">
+      <div class="dash-top">
+        <h1>Students</h1>
+        <button class="btn btn-primary" onclick="openAddStudent()">+ Add Student</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-label">Total</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:var(--success)" id="stat-done">—</div><div class="stat-label">Completed</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:var(--warning)" id="stat-pend">—</div><div class="stat-label">Pending</div></div>
+      </div>
+
+      <!-- Search -->
+      <div class="toolbar">
+        <input class="search-bar" type="text" placeholder="Search students…" oninput="filterStudents(this.value)">
+        <span id="student-count" class="text-muted" style="font-size:14px;"></span>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <div class="table-wrap">
+          <table id="student-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th>Survey Link</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="student-tbody"></tbody>
+          </table>
+          <div id="no-students" class="hidden text-center" style="padding:40px;color:var(--text-muted);">
+            No students yet. Click <strong>+ Add Student</strong> to get started.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── QUESTIONS TAB ── -->
+    <div id="tab-questions" class="hidden">
+      <div class="dash-top">
+        <h1>Survey Questions</h1>
+        <button class="btn btn-primary" onclick="openAddQuestion()">+ Add Question</button>
+      </div>
+      <div class="alert alert-info" style="margin-bottom:20px;">
+        These are the questions students see. <strong>To reorder:</strong> drag the <strong>⠿</strong> handle, or use the <strong>▲ ▼</strong> arrows — for a whole section (header) or a single question. Changes save automatically.
+      </div>
+      <div id="questions-list"></div>
+    </div>
+
+    <!-- ── SETTINGS TAB ── -->
+    <div id="tab-settings" class="hidden">
+      <div class="dash-top"><h1>Settings</h1></div>
+      <div class="card" style="max-width:420px;">
+        <h3 style="margin-bottom:20px;">Change Password</h3>
+        <div id="pw-alert"></div>
+        <form onsubmit="changePassword(event)">
+          <div class="form-group">
+            <label>Current Password</label>
+            <input type="password" id="cur-pw" required>
+          </div>
+          <div class="form-group">
+            <label>New Password <span style="font-size:12px;color:var(--text-muted)">(min 6 characters)</span></label>
+            <input type="password" id="new-pw" required minlength="6">
+          </div>
+          <div class="form-group">
+            <label>Confirm New Password</label>
+            <input type="password" id="conf-pw" required minlength="6">
+          </div>
+          <button type="submit" class="btn btn-primary">Update Password</button>
+        </form>
+      </div>
+      <div class="card" style="max-width:420px;margin-top:20px;">
+        <h3 style="margin-bottom:12px;">How to Share the Survey</h3>
+        <ol style="padding-left:20px;font-size:14px;line-height:2;">
+          <li>Add a student using <strong>+ Add Student</strong></li>
+          <li>Click the <strong>Copy Link</strong> button next to their name</li>
+          <li>Paste that link into an email and send it to the student</li>
+          <li>The student opens the link on any device (phone or computer)</li>
+          <li>Their status changes to <span class="badge badge-success">Completed</span> once submitted</li>
+        </ol>
+        <div class="alert alert-info" style="margin-top:12px;font-size:13px;">
+          Each student gets their own unique link. Only you can see the responses.
+        </div>
+      </div>
+
+      <div class="card" style="max-width:420px;margin-top:20px;">
+        <h3 style="margin-bottom:6px;">💾 Export &amp; Backup Data</h3>
+        <p class="text-muted" style="font-size:13px;margin-bottom:16px;">Download all student responses to keep, analyze, or back up.</p>
+
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <a class="btn btn-primary btn-full" href="/api/admin/export/json" download>⬇️ Download Backup (JSON)</a>
+            <p class="text-muted" style="font-size:12px;margin-top:4px;">Complete backup — best for re-importing or future analysis. Keep this safe.</p>
+          </div>
+          <div>
+            <a class="btn btn-success btn-full" href="/api/admin/export/csv" download>📊 Download Spreadsheet (Excel/CSV)</a>
+            <p class="text-muted" style="font-size:12px;margin-top:4px;">Opens in Excel — one row per student, one column per question.</p>
+          </div>
+          <div>
+            <button class="btn btn-secondary btn-full" onclick="printAllResponses()">🖨️ Save All as PDF</button>
+            <p class="text-muted" style="font-size:12px;margin-top:4px;">Printable report of every completed student (choose "Save as PDF" in the print dialog).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Bottom Tab Bar (mobile) -->
+<nav class="bottom-nav">
+  <button class="bottom-nav-item active" onclick="switchTab('students')" id="bn-students">
+    <span class="bn-icon">👥</span> Students
+  </button>
+  <button class="bottom-nav-item" onclick="switchTab('questions')" id="bn-questions">
+    <span class="bn-icon">❓</span> Questions
+  </button>
+  <button class="bottom-nav-item" onclick="switchTab('settings')" id="bn-settings">
+    <span class="bn-icon">⚙️</span> Settings
+  </button>
+</nav>
+
+<!-- ── MODAL: Add / Edit Student ── -->
+<div class="modal-overlay hidden" id="student-modal" onclick="closeOnOverlay(event,'student-modal')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="student-modal-title">Add Student</h3>
+      <button class="modal-close" onclick="closeModal('student-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="student-modal-alert"></div>
+      <div class="form-group">
+        <label>Full Name <span class="req">*</span></label>
+        <input type="text" id="s-name" placeholder="Student full name">
+      </div>
+      <div class="form-group">
+        <label>Email Address <span class="req">*</span></label>
+        <input type="email" id="s-email" placeholder="student@email.com">
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" id="s-phone" placeholder="(555) 555-5555">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('student-modal')">Cancel</button>
+      <button class="btn btn-primary" id="student-save-btn" onclick="saveStudent()">Add Student</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: View Response ── -->
+<div class="modal-overlay hidden" id="response-modal" onclick="closeOnOverlay(event,'response-modal')">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <h3 id="response-modal-title">Responses</h3>
+      <button class="modal-close" onclick="closeModal('response-modal')">×</button>
+    </div>
+    <div class="modal-body" id="response-modal-body">
+      <div class="spinner"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('response-modal')">Close</button>
+      <button class="btn btn-primary" id="print-btn" onclick="printResponse()">🖨️ Print</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Add / Edit Question ── -->
+<div class="modal-overlay hidden" id="question-modal" onclick="closeOnOverlay(event,'question-modal')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="question-modal-title">Add Question</h3>
+      <button class="modal-close" onclick="closeModal('question-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="question-modal-alert"></div>
+      <div class="form-group">
+        <label>Section <span class="req">*</span></label>
+        <input type="text" id="q-section" placeholder="e.g. Student Info" list="section-list">
+        <datalist id="section-list"></datalist>
+      </div>
+      <div class="form-group">
+        <label>Question Label <span class="req">*</span></label>
+        <input type="text" id="q-label" placeholder="What is the question?">
+      </div>
+      <div class="form-group">
+        <label>Answer Type</label>
+        <select id="q-type" onchange="onTypeChange()">
+          <option value="text">Short Text</option>
+          <option value="textarea">Long Text / Paragraph</option>
+          <option value="yes_no">Yes / No</option>
+          <option value="date">Date</option>
+          <option value="select">Dropdown (Multiple Choice)</option>
+          <option value="email">Email</option>
+          <option value="tel">Phone Number</option>
+          <option value="number">Number</option>
+        </select>
+      </div>
+      <div class="form-group" id="options-group" style="display:none;">
+        <label>Dropdown Options <span style="font-size:12px;color:var(--text-muted)">(separate with | pipe)</span></label>
+        <input type="text" id="q-options" placeholder="Option A|Option B|Option C">
+      </div>
+      <div class="form-group">
+        <label>Placeholder Text <span style="font-size:12px;color:var(--text-muted)">(optional hint shown in field)</span></label>
+        <input type="text" id="q-placeholder" placeholder="e.g. Enter your answer here">
+      </div>
+      <div class="form-group">
+        <label>Display Order <span style="font-size:12px;color:var(--text-muted)">(lower numbers appear first)</span></label>
+        <input type="number" id="q-order" placeholder="e.g. 100" min="1">
+      </div>
+
+      <!-- Conditional display (skip logic) -->
+      <div style="background:#f7f7f7;border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;">
+        <label style="font-weight:700;margin-bottom:8px;">🔀 Conditional Display <span style="font-size:12px;color:var(--text-muted);font-weight:400;">(optional)</span></label>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Only show this question depending on the answer to an earlier Yes/No question.</p>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label style="font-size:13px;">Show this question only if…</label>
+          <select id="q-depends-on" onchange="onDependsChange()">
+            <option value="">Always show (no condition)</option>
+          </select>
+        </div>
+        <div class="form-group" id="depends-value-group" style="display:none;margin-bottom:0;">
+          <label style="font-size:13px;">…is answered:</label>
+          <select id="q-depends-value">
+            <option value="No">No</option>
+            <option value="Yes">Yes</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <input type="checkbox" id="q-required" style="width:auto;">
+        <label for="q-required" style="margin:0;font-weight:500;">Required field (student must answer)</label>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;" id="active-row">
+        <input type="checkbox" id="q-active" style="width:auto;" checked>
+        <label for="q-active" style="margin:0;font-weight:500;">Active (visible to students)</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('question-modal')">Cancel</button>
+      <button class="btn btn-primary" id="question-save-btn" onclick="saveQuestion()">Add Question</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MODAL: Confirm Delete ── -->
+<div class="modal-overlay hidden" id="confirm-modal" onclick="closeOnOverlay(event,'confirm-modal')">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <h3 id="confirm-title">Confirm</h3>
+      <button class="modal-close" onclick="closeModal('confirm-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-msg"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let allStudents = [];
+let allQuestions = [];
+let editingStudentId = null;
+let editingQuestionId = null;
+let currentResponseData = null;
+const BASE_URL = window.location.origin;
+
+// ── Init ───────────────────────────────────────────────────────────────────
+(async () => {
+  try {
+    const me = await api('/api/admin/me');
+    if (!me || me.error) { window.location.href = '/admin'; return; }
+  } catch { window.location.href = '/admin'; return; }
+  await Promise.all([loadStudents(), loadQuestions()]);
+  loadStats();
+})();
+
+async function api(url, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  return res.json();
+}
+
+// ── Tab Switching ──────────────────────────────────────────────────────────
+function switchTab(tab) {
+  ['students','questions','settings'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
+    document.getElementById(`nav-${t}`)?.classList.toggle('active', t === tab);
+    document.getElementById(`bn-${t}`)?.classList.toggle('active', t === tab);
+  });
+  if (tab === 'questions') loadQuestions();
+  if (tab === 'students') { loadStudents(); loadStats(); }
+}
+
+// ── Stats ──────────────────────────────────────────────────────────────────
+async function loadStats() {
+  const s = await api('/api/admin/stats');
+  document.getElementById('stat-total').textContent = s.total;
+  document.getElementById('stat-done').textContent  = s.completed;
+  document.getElementById('stat-pend').textContent  = s.pending;
+}
+
+// ── Students ───────────────────────────────────────────────────────────────
+async function loadStudents() {
+  allStudents = await api('/api/admin/students');
+  renderStudents(allStudents);
+}
+
+function renderStudents(list) {
+  const tbody = document.getElementById('student-tbody');
+  const noEl  = document.getElementById('no-students');
+  tbody.innerHTML = '';
+
+  if (!list.length) {
+    noEl.classList.remove('hidden');
+    document.getElementById('student-count').textContent = '';
+    return;
+  }
+  noEl.classList.add('hidden');
+  document.getElementById('student-count').textContent = `${list.length} student${list.length !== 1 ? 's' : ''}`;
+
+  for (const s of list) {
+    const link = `${BASE_URL}/s/${s.token}`;
+    const badge = s.completed
+      ? '<span class="badge badge-success">✓ Completed</span>'
+      : '<span class="badge badge-warning">Pending</span>';
+    const dateStr = s.completed_at
+      ? new Date(s.completed_at).toLocaleDateString()
+      : (new Date(s.created_at).toLocaleDateString());
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${esc(s.name)}</strong><br><small class="text-muted">${dateStr}</small></td>
+      <td>${esc(s.email)}</td>
+      <td>${badge}</td>
+      <td>
+        <div class="link-box">
+          <span title="${link}">${link.replace(BASE_URL,'')}</span>
+          <button class="btn btn-sm btn-secondary" onclick="copyLink('${link}',this)">Copy</button>
+        </div>
+      </td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${s.completed ? `<button class="btn btn-sm btn-primary" onclick="viewResponse(${s.id},'${esc(s.name)}')">View</button>` : ''}
+          <button class="btn btn-sm btn-secondary" onclick="openEditStudent(${s.id})">Edit</button>
+          ${s.completed ? `<button class="btn btn-sm btn-warning" onclick="confirmReset(${s.id},'${esc(s.name)}')">Reset</button>` : ''}
+          <button class="btn btn-sm btn-danger" onclick="confirmDeleteStudent(${s.id},'${esc(s.name)}')">Delete</button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function filterStudents(q) {
+  const term = q.toLowerCase();
+  const filtered = allStudents.filter(s =>
+    s.name.toLowerCase().includes(term) || s.email.toLowerCase().includes(term)
+  );
+  renderStudents(filtered);
+}
+
+function openAddStudent() {
+  editingStudentId = null;
+  document.getElementById('student-modal-title').textContent = 'Add Student';
+  document.getElementById('student-save-btn').textContent = 'Add Student';
+  document.getElementById('s-name').value = '';
+  document.getElementById('s-email').value = '';
+  document.getElementById('s-phone').value = '';
+  document.getElementById('student-modal-alert').innerHTML = '';
+  openModal('student-modal');
+  setTimeout(() => document.getElementById('s-name').focus(), 100);
+}
+
+function openEditStudent(id) {
+  const s = allStudents.find(x => x.id === id);
+  if (!s) return;
+  editingStudentId = id;
+  document.getElementById('student-modal-title').textContent = 'Edit Student';
+  document.getElementById('student-save-btn').textContent = 'Save Changes';
+  document.getElementById('s-name').value  = s.name;
+  document.getElementById('s-email').value = s.email;
+  document.getElementById('s-phone').value = s.phone || '';
+  document.getElementById('student-modal-alert').innerHTML = '';
+  openModal('student-modal');
+}
+
+async function saveStudent() {
+  const name  = document.getElementById('s-name').value.trim();
+  const email = document.getElementById('s-email').value.trim();
+  const phone = document.getElementById('s-phone').value.trim();
+  const alertBox = document.getElementById('student-modal-alert');
+  alertBox.innerHTML = '';
+
+  if (!name || !email) {
+    alertBox.innerHTML = '<div class="alert alert-error">Name and email are required.</div>';
+    return;
+  }
+
+  const btn = document.getElementById('student-save-btn');
+  btn.disabled = true;
+
+  const url    = editingStudentId ? `/api/admin/students/${editingStudentId}` : '/api/admin/students';
+  const method = editingStudentId ? 'PUT' : 'POST';
+  const data   = await api(url, method, { name, email, phone });
+
+  btn.disabled = false;
+  if (data.error) {
+    alertBox.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+    return;
+  }
+  closeModal('student-modal');
+  await loadStudents();
+  loadStats();
+}
+
+async function confirmDeleteStudent(id, name) {
+  confirm_action(
+    `Delete "${name}"?`,
+    `This will permanently delete ${name} and all their survey responses. This cannot be undone.`,
+    async () => {
+      await api(`/api/admin/students/${id}`, 'DELETE');
+      await loadStudents();
+      loadStats();
+    }
+  );
+}
+
+async function confirmReset(id, name) {
+  confirm_action(
+    `Reset "${name}"'s survey?`,
+    `This will delete all of ${name}'s answers and allow them to re-submit the survey.`,
+    async () => {
+      await api(`/api/admin/students/${id}/reset`, 'POST');
+      await loadStudents();
+      loadStats();
+    }
+  );
+}
+
+function copyLink(link, btn) {
+  navigator.clipboard.writeText(link).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    btn.style.background = 'var(--success)';
+    btn.style.color = '#fff';
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.style.background = '';
+      btn.style.color = '';
+    }, 2000);
+  }).catch(() => {
+    prompt('Copy this link:', link);
+  });
+}
+
+// ── View Response ──────────────────────────────────────────────────────────
+async function viewResponse(studentId, name) {
+  document.getElementById('response-modal-title').textContent = `${name}'s Responses`;
+  document.getElementById('response-modal-body').innerHTML = '<div style="text-align:center;padding:20px;"><div class="spinner"></div></div>';
+  openModal('response-modal');
+
+  const data = await api(`/api/admin/responses/${studentId}`);
+  if (data.error) {
+    document.getElementById('response-modal-body').innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+    return;
+  }
+
+  currentResponseData = data;   // saved so the Print button can use it
+  const { student, responses } = data;
+  const sections = {};
+  for (const r of responses) {
+    if (!sections[r.section]) sections[r.section] = [];
+    sections[r.section].push(r);
+  }
+
+  let html = '';
+  if (student.completed_at) {
+    html += `<p class="text-muted" style="margin-bottom:16px;font-size:13px;">Submitted on ${new Date(student.completed_at).toLocaleString()}</p>`;
+  }
+
+  for (const [section, rows] of Object.entries(sections)) {
+    html += `<div class="response-section"><h4>${section}</h4>`;
+    for (const r of rows) {
+      const ans = r.answer?.trim() ? r.answer : '<em style="color:var(--text-muted)">Not answered</em>';
+      html += `<div class="response-row"><span class="response-q">${esc(r.label)}</span><span class="response-a">${esc(r.answer?.trim() || '')||ans}</span></div>`;
+    }
+    html += '</div>';
+  }
+  if (!responses.length) html = '<p class="text-muted">No responses recorded.</p>';
+  document.getElementById('response-modal-body').innerHTML = html;
+}
+
+// ── Print a completed student's responses ───────────────────────────────────
+function printResponse() {
+  if (!currentResponseData) return;
+  const { student, responses } = currentResponseData;
+
+  const sections = {};
+  for (const r of responses) {
+    if (!sections[r.section]) sections[r.section] = [];
+    sections[r.section].push(r);
+  }
+
+  let rowsHtml = '';
+  for (const [section, rows] of Object.entries(sections)) {
+    rowsHtml += `<tr class="section-head"><td colspan="2">${esc(section)}</td></tr>`;
+    for (const r of rows) {
+      const ans = (r.answer && r.answer.trim()) ? esc(r.answer) : '<span class="empty">—</span>';
+      rowsHtml += `<tr><td class="q">${esc(r.label)}</td><td class="a">${ans}</td></tr>`;
+    }
+  }
+
+  const submitted = student.completed_at
+    ? new Date(student.completed_at).toLocaleString()
+    : '';
+  const printedOn = new Date().toLocaleString();
+
+  const doc = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>${esc(student.name)} - Student Service Form</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { font-family: Arial, Helvetica, sans-serif; color:#000; margin:0; padding:30px; font-size:13px; }
+      .head { border-bottom:3px solid #8B0000; padding-bottom:12px; margin-bottom:18px; }
+      .head h1 { color:#8B0000; font-size:22px; margin:0 0 4px; }
+      .head .sub { color:#555; font-size:12px; }
+      .info { margin-bottom:18px; }
+      .info div { margin-bottom:3px; }
+      .info b { display:inline-block; min-width:90px; }
+      table { width:100%; border-collapse:collapse; }
+      td { border:1px solid #ccc; padding:8px 10px; vertical-align:top; }
+      td.q { width:42%; color:#333; font-weight:600; background:#f7f7f7; }
+      td.a { width:58%; }
+      .empty { color:#aaa; }
+      tr.section-head td { background:#8B0000; color:#fff; font-weight:bold; font-size:13px;
+        text-transform:uppercase; letter-spacing:.4px; border:1px solid #8B0000; }
+      .footer { margin-top:24px; font-size:11px; color:#888; text-align:center; border-top:1px solid #ddd; padding-top:10px; }
+      @media print { body { padding:0; } @page { margin:15mm; } }
+    </style></head><body>
+    <div class="head">
+      <h1>Student Service Form</h1>
+      <div class="sub">The Salvation Army</div>
+    </div>
+    <div class="info">
+      <div><b>Name:</b> ${esc(student.name)}</div>
+      <div><b>Email:</b> ${esc(student.email)}</div>
+      ${student.phone ? `<div><b>Phone:</b> ${esc(student.phone)}</div>` : ''}
+      ${submitted ? `<div><b>Submitted:</b> ${submitted}</div>` : ''}
+    </div>
+    <table>${rowsHtml || '<tr><td colspan="2">No responses recorded.</td></tr>'}</table>
+    <div class="footer">Printed on ${printedOn}</div>
+    </body></html>`;
+
+  openPrintWindow(doc);
+}
+
+// Shared print-document styles + opener
+function printStyles() {
+  return `
+    * { box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; color:#000; margin:0; padding:30px; font-size:13px; }
+    .head { border-bottom:3px solid #8B0000; padding-bottom:12px; margin-bottom:18px; }
+    .head h1 { color:#8B0000; font-size:22px; margin:0 0 4px; }
+    .head .sub { color:#555; font-size:12px; }
+    .info { margin-bottom:18px; }
+    .info div { margin-bottom:3px; }
+    .info b { display:inline-block; min-width:90px; }
+    table { width:100%; border-collapse:collapse; margin-bottom:8px; }
+    td { border:1px solid #ccc; padding:8px 10px; vertical-align:top; }
+    td.q { width:42%; color:#333; font-weight:600; background:#f7f7f7; }
+    td.a { width:58%; }
+    .empty { color:#aaa; }
+    tr.section-head td { background:#8B0000; color:#fff; font-weight:bold; font-size:13px;
+      text-transform:uppercase; letter-spacing:.4px; border:1px solid #8B0000; }
+    .student-block { page-break-after:always; }
+    .student-block:last-child { page-break-after:auto; }
+    .footer { margin-top:24px; font-size:11px; color:#888; text-align:center; border-top:1px solid #ddd; padding-top:10px; }
+    @media print { body { padding:0; } @page { margin:15mm; } }`;
+}
+
+function openPrintWindow(doc) {
+  const w = window.open('', '_blank');
+  if (!w) { alert('Please allow pop-ups for this site to print.'); return; }
+  w.document.open();
+  w.document.write(doc);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { w.print(); }, 400);
+}
+
+// Build a printable block (used by both single + all-students print)
+function buildStudentBlock(student, questions, answers) {
+  const sections = {};
+  for (const q of questions) {
+    if (!sections[q.section]) sections[q.section] = [];
+    sections[q.section].push(q);
+  }
+  let rows = '';
+  for (const [section, qs] of Object.entries(sections)) {
+    rows += `<tr class="section-head"><td colspan="2">${esc(section)}</td></tr>`;
+    for (const q of qs) {
+      const a = answers[q.id];
+      const cell = (a && String(a).trim()) ? esc(a) : '<span class="empty">—</span>';
+      rows += `<tr><td class="q">${esc(q.label)}</td><td class="a">${cell}</td></tr>`;
+    }
+  }
+  const submitted = student.completed_at ? new Date(student.completed_at).toLocaleString() : '';
+  return `<div class="student-block">
+    <div class="info">
+      <div><b>Name:</b> ${esc(student.name)}</div>
+      <div><b>Email:</b> ${esc(student.email)}</div>
+      ${student.phone ? `<div><b>Phone:</b> ${esc(student.phone)}</div>` : ''}
+      ${submitted ? `<div><b>Submitted:</b> ${submitted}</div>` : ''}
+    </div>
+    <table>${rows}</table>
+  </div>`;
+}
+
+// Print / Save-as-PDF for ALL completed students
+async function printAllResponses() {
+  const data = await api('/api/admin/export/all');
+  if (data.error) { alert(data.error); return; }
+  const completed = data.students.filter(s => s.completed);
+  if (!completed.length) { alert('No completed surveys yet.'); return; }
+
+  let blocks = '';
+  for (const s of completed) {
+    blocks += `<h2 style="color:#8B0000;font-size:16px;margin:0 0 8px;">${esc(s.name)}</h2>`;
+    blocks += buildStudentBlock(s, data.questions, s.answers);
+  }
+
+  const doc = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>All Completed Surveys</title><style>${printStyles()}</style></head><body>
+    <div class="head"><h1>Student Service Form — All Responses</h1>
+      <div class="sub">The Salvation Army · ${completed.length} completed · Printed ${new Date().toLocaleString()}</div></div>
+    ${blocks}
+    </body></html>`;
+  openPrintWindow(doc);
+}
+
+// ── Questions ──────────────────────────────────────────────────────────────
+async function loadQuestions() {
+  allQuestions = await api('/api/admin/questions');
+  renderQuestions();
+  updateSectionDatalist();
+}
+
+function renderQuestions() {
+  const container = document.getElementById('questions-list');
+  if (!allQuestions.length) {
+    container.innerHTML = '<div class="card text-center" style="padding:40px;color:var(--text-muted);">No questions yet.</div>';
+    return;
+  }
+
+  const sections = new Map();
+  for (const q of allQuestions) {
+    if (!sections.has(q.section)) sections.set(q.section, []);
+    sections.get(q.section).push(q);
+  }
+
+  const typeLabels = {
+    text:'Short Text', textarea:'Long Text', yes_no:'Yes/No', date:'Date',
+    select:'Dropdown', email:'Email', tel:'Phone', number:'Number'
+  };
+
+  let html = '';
+  const sectionNames = [...sections.keys()];
+  sectionNames.forEach((section, sIdx) => {
+    const qs = sections.get(section);
+    html += `<div class="section-card card" data-section="${esc(section)}">
+      <div class="section-head">
+        <span class="drag-handle sec-handle" title="Drag to move section">⠿</span>
+        <span class="section-name">${esc(section)}</span>
+        <span class="section-move">
+          <button class="move-btn" title="Move section up" ${sIdx === 0 ? 'disabled' : ''} onclick="moveSection('${esc(section)}',-1)">▲</button>
+          <button class="move-btn" title="Move section down" ${sIdx === sectionNames.length-1 ? 'disabled' : ''} onclick="moveSection('${esc(section)}',1)">▼</button>
+        </span>
+      </div>
+      <div class="q-list" data-section="${esc(section)}">`;
+    qs.forEach((q, qIdx) => {
+      let condText = '';
+      if (q.depends_on) {
+        const parent = allQuestions.find(p => p.id === q.depends_on);
+        if (parent) condText = ` · <span style="color:#2980b9">🔀 Shows if "#${parent.order_num} ${esc(parent.label)}" = ${esc(q.depends_value)}</span>`;
+      }
+      html += `<div class="q-item${q.active ? '' : ' inactive'}" data-qid="${q.id}">
+        <span class="drag-handle q-handle" title="Drag to reorder">⠿</span>
+        <span class="q-move">
+          <button class="move-btn sm" title="Move up" ${qIdx === 0 ? 'disabled' : ''} onclick="moveQuestion(${q.id},-1)">▲</button>
+          <button class="move-btn sm" title="Move down" ${qIdx === qs.length-1 ? 'disabled' : ''} onclick="moveQuestion(${q.id},1)">▼</button>
+        </span>
+        <div class="q-body">
+          <div class="q-label">${esc(q.label)}${q.required ? ' <span style="color:var(--danger);font-size:12px;">required</span>' : ''}</div>
+          <div class="q-meta">
+            Type: ${typeLabels[q.type] || q.type}
+            ${q.options ? ` · Options: ${esc(q.options)}` : ''}
+            ${condText}
+            ${!q.active ? ' · <span style="color:var(--danger)">Hidden from students</span>' : ''}
+          </div>
+        </div>
+        <div class="q-actions">
+          <button class="btn btn-sm btn-secondary" onclick="openEditQuestion(${q.id})">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="confirmDeleteQuestion(${q.id},'${esc(q.label)}')">Delete</button>
+        </div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  container.innerHTML = html;
+  initSortable();
+}
+
+// ── Reorder model helpers ────────────────────────────────────────────────────
+function buildOrderModel() {
+  const model = [];
+  const map = new Map();
+  for (const q of allQuestions) {
+    if (!map.has(q.section)) { const o = { name: q.section, qs: [] }; map.set(q.section, o); model.push(o); }
+    map.get(q.section).qs.push(q);
+  }
+  return model;
+}
+
+function flatItems(model) {
+  const items = [];
+  for (const sec of model) for (const q of sec.qs) items.push({ id: q.id, section: sec.name });
+  return items;
+}
+
+async function persistItems(items) {
+  // optimistic local update so the UI feels instant
+  items.forEach((it, i) => {
+    const q = allQuestions.find(x => x.id === it.id);
+    if (q) { q.order_num = (i + 1) * 10; q.section = it.section; }
+  });
+  allQuestions.sort((a, b) => (a.order_num - b.order_num) || (a.id - b.id));
+  renderQuestions();
+  await api('/api/admin/questions/reorder', 'POST', { items });
+}
+
+function moveSection(name, dir) {
+  const model = buildOrderModel();
+  const i = model.findIndex(s => s.name === name);
+  const j = i + dir;
+  if (i === -1 || j < 0 || j >= model.length) return;
+  [model[i], model[j]] = [model[j], model[i]];
+  persistItems(flatItems(model));
+}
+
+function moveQuestion(qid, dir) {
+  const model = buildOrderModel();
+  for (const sec of model) {
+    const i = sec.qs.findIndex(q => q.id === qid);
+    if (i === -1) continue;
+    const j = i + dir;
+    if (j < 0 || j >= sec.qs.length) return;   // keep within its section
+    [sec.qs[i], sec.qs[j]] = [sec.qs[j], sec.qs[i]];
+    break;
+  }
+  persistItems(flatItems(model));
+}
+
+// ── Drag and drop (desktop) ──────────────────────────────────────────────────
+let draggingSection = null;
+let draggingQ = null;
+
+function getDragAfterElement(container, y, selector) {
+  const els = [...container.querySelectorAll(selector + ':not(.dragging)')];
+  return els.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) return { offset, element: child };
+    return closest;
+  }, { offset: -Infinity }).element;
+}
+
+function persistFromDOM() {
+  const items = [];
+  document.querySelectorAll('#questions-list .section-card').forEach(card => {
+    const section = card.dataset.section;
+    card.querySelectorAll('.q-item').forEach(qi => {
+      items.push({ id: Number(qi.dataset.qid), section });
+    });
+  });
+  persistItems(items);
+}
+
+function initSortable() {
+  const list = document.getElementById('questions-list');
+
+  // Section cards
+  list.querySelectorAll('.section-card').forEach(card => {
+    const handle = card.querySelector('.sec-handle');
+    if (handle) {
+      handle.addEventListener('mousedown', () => card.setAttribute('draggable', 'true'));
+    }
+    card.addEventListener('dragstart', e => {
+      if (card.getAttribute('draggable') !== 'true') return;
+      e.stopPropagation();
+      draggingSection = card;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      card.removeAttribute('draggable');
+      if (draggingSection === card) {
+        card.classList.remove('dragging');
+        draggingSection = null;
+        persistFromDOM();
+      }
+    });
+  });
+
+  list.addEventListener('dragover', e => {
+    if (!draggingSection) return;
+    e.preventDefault();
+    const after = getDragAfterElement(list, e.clientY, '.section-card');
+    if (after == null) list.appendChild(draggingSection);
+    else list.insertBefore(draggingSection, after);
+  });
+
+  // Question items (within and across sections)
+  list.querySelectorAll('.q-item').forEach(item => {
+    const handle = item.querySelector('.q-handle');
+    if (handle) {
+      handle.addEventListener('mousedown', () => item.setAttribute('draggable', 'true'));
+    }
+    item.addEventListener('dragstart', e => {
+      if (item.getAttribute('draggable') !== 'true') return;
+      e.stopPropagation();
+      draggingQ = item;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    item.addEventListener('dragend', () => {
+      item.removeAttribute('draggable');
+      if (draggingQ === item) {
+        item.classList.remove('dragging');
+        draggingQ = null;
+        persistFromDOM();
+      }
+    });
+  });
+
+  list.querySelectorAll('.q-list').forEach(ql => {
+    ql.addEventListener('dragover', e => {
+      if (!draggingQ) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const after = getDragAfterElement(ql, e.clientY, '.q-item');
+      if (after == null) ql.appendChild(draggingQ);
+      else ql.insertBefore(draggingQ, after);
+    });
+  });
+}
+
+function updateSectionDatalist() {
+  const sections = [...new Set(allQuestions.map(q => q.section))];
+  document.getElementById('section-list').innerHTML =
+    sections.map(s => `<option value="${esc(s)}">`).join('');
+}
+
+function onTypeChange() {
+  const type = document.getElementById('q-type').value;
+  document.getElementById('options-group').style.display = type === 'select' ? '' : 'none';
+}
+
+function onDependsChange() {
+  const val = document.getElementById('q-depends-on').value;
+  document.getElementById('depends-value-group').style.display = val ? '' : 'none';
+}
+
+// Fill the "Show only if…" dropdown with all Yes/No questions (excluding the one being edited)
+function populateDependsOptions(selectedId) {
+  const sel = document.getElementById('q-depends-on');
+  const yesNoQs = allQuestions.filter(q => q.type === 'yes_no' && q.id !== editingQuestionId);
+  let html = '<option value="">Always show (no condition)</option>';
+  for (const q of yesNoQs) {
+    const sel2 = (selectedId && Number(selectedId) === q.id) ? ' selected' : '';
+    html += `<option value="${q.id}"${sel2}>#${q.order_num} · ${esc(q.label)}</option>`;
+  }
+  sel.innerHTML = html;
+}
+
+function openAddQuestion() {
+  editingQuestionId = null;
+  document.getElementById('question-modal-title').textContent = 'Add Question';
+  document.getElementById('question-save-btn').textContent = 'Add Question';
+  document.getElementById('q-section').value = '';
+  document.getElementById('q-label').value = '';
+  document.getElementById('q-type').value = 'text';
+  document.getElementById('q-options').value = '';
+  document.getElementById('q-placeholder').value = '';
+  document.getElementById('q-order').value = '';
+  document.getElementById('q-required').checked = false;
+  document.getElementById('q-active').checked = true;
+  document.getElementById('question-modal-alert').innerHTML = '';
+  document.getElementById('options-group').style.display = 'none';
+  document.getElementById('active-row').style.display = 'none';
+  populateDependsOptions(null);
+  document.getElementById('q-depends-value').value = 'No';
+  document.getElementById('depends-value-group').style.display = 'none';
+  openModal('question-modal');
+  setTimeout(() => document.getElementById('q-section').focus(), 100);
+}
+
+function openEditQuestion(id) {
+  const q = allQuestions.find(x => x.id === id);
+  if (!q) return;
+  editingQuestionId = id;
+  document.getElementById('question-modal-title').textContent = 'Edit Question';
+  document.getElementById('question-save-btn').textContent = 'Save Changes';
+  document.getElementById('q-section').value      = q.section;
+  document.getElementById('q-label').value        = q.label;
+  document.getElementById('q-type').value         = q.type;
+  document.getElementById('q-options').value      = q.options || '';
+  document.getElementById('q-placeholder').value  = q.placeholder || '';
+  document.getElementById('q-order').value        = q.order_num;
+  document.getElementById('q-required').checked   = !!q.required;
+  document.getElementById('q-active').checked     = !!q.active;
+  document.getElementById('question-modal-alert').innerHTML = '';
+  document.getElementById('options-group').style.display = q.type === 'select' ? '' : 'none';
+  document.getElementById('active-row').style.display = '';
+  populateDependsOptions(q.depends_on);
+  document.getElementById('q-depends-value').value = q.depends_value || 'No';
+  document.getElementById('depends-value-group').style.display = q.depends_on ? '' : 'none';
+  openModal('question-modal');
+}
+
+async function saveQuestion() {
+  const section     = document.getElementById('q-section').value.trim();
+  const label       = document.getElementById('q-label').value.trim();
+  const type        = document.getElementById('q-type').value;
+  const options     = document.getElementById('q-options').value.trim();
+  const placeholder = document.getElementById('q-placeholder').value.trim();
+  const order_num   = parseInt(document.getElementById('q-order').value) || 999;
+  const required    = document.getElementById('q-required').checked;
+  const active      = document.getElementById('q-active').checked;
+  const depends_on    = document.getElementById('q-depends-on').value || null;
+  const depends_value = depends_on ? document.getElementById('q-depends-value').value : null;
+  const alertBox    = document.getElementById('question-modal-alert');
+  alertBox.innerHTML = '';
+
+  if (!section || !label) {
+    alertBox.innerHTML = '<div class="alert alert-error">Section and question label are required.</div>';
+    return;
+  }
+  if (type === 'select' && !options) {
+    alertBox.innerHTML = '<div class="alert alert-error">Please enter dropdown options (separated by |).</div>';
+    return;
+  }
+
+  const btn = document.getElementById('question-save-btn');
+  btn.disabled = true;
+
+  const url    = editingQuestionId ? `/api/admin/questions/${editingQuestionId}` : '/api/admin/questions';
+  const method = editingQuestionId ? 'PUT' : 'POST';
+  const data   = await api(url, method, { section, label, type, options: options || null, placeholder: placeholder || null, required, order_num, active, depends_on, depends_value });
+
+  btn.disabled = false;
+  if (data.error) {
+    alertBox.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+    return;
+  }
+  closeModal('question-modal');
+  await loadQuestions();
+}
+
+async function confirmDeleteQuestion(id, label) {
+  confirm_action(
+    'Delete Question?',
+    `Delete "${label}"? This will also remove all student answers for this question.`,
+    async () => {
+      await api(`/api/admin/questions/${id}`, 'DELETE');
+      await loadQuestions();
+    }
+  );
+}
+
+// ── Settings ───────────────────────────────────────────────────────────────
+async function changePassword(e) {
+  e.preventDefault();
+  const cur  = document.getElementById('cur-pw').value;
+  const nw   = document.getElementById('new-pw').value;
+  const conf = document.getElementById('conf-pw').value;
+  const box  = document.getElementById('pw-alert');
+  box.innerHTML = '';
+
+  if (nw !== conf) {
+    box.innerHTML = '<div class="alert alert-error">New passwords do not match.</div>';
+    return;
+  }
+  const data = await api('/api/admin/change-password', 'POST', { currentPassword: cur, newPassword: nw });
+  if (data.error) {
+    box.innerHTML = `<div class="alert alert-error">${data.error}</div>`;
+  } else {
+    box.innerHTML = '<div class="alert alert-success">Password updated successfully!</div>';
+    e.target.reset();
+  }
+}
+
+async function logout() {
+  await api('/api/admin/logout', 'POST');
+  window.location.href = '/admin';
+}
+
+// ── Modal helpers ──────────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function closeOnOverlay(e, id) { if (e.target.id === id) closeModal(id); }
+
+function confirm_action(title, msg, onConfirm) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent   = msg;
+  const btn = document.getElementById('confirm-ok-btn');
+  btn.onclick = () => { closeModal('confirm-modal'); onConfirm(); };
+  openModal('confirm-modal');
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+node_modules/
+db/
+*.log
+tunnel.log
+cloudflared.exe
+.env
+.DS_Store
