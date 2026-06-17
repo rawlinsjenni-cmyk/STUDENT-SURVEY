@@ -37,6 +37,13 @@
   <!-- Main Content -->
   <main class="dash-main">
 
+    <!-- ── Survey switcher (keeps the two surveys completely separate) ── -->
+    <div class="survey-switch">
+      <span class="survey-switch-label">Survey:</span>
+      <button class="survey-btn active" id="sw-current" onclick="setSurvey('current')">📋 Current Students</button>
+      <button class="survey-btn" id="sw-graduate" onclick="setSurvey('graduate')">🎓 Graduates</button>
+    </div>
+
     <!-- ── STUDENTS TAB ── -->
     <div id="tab-students">
       <div class="dash-top">
@@ -133,11 +140,11 @@
 
         <div style="display:flex;flex-direction:column;gap:12px;">
           <div>
-            <a class="btn btn-primary btn-full" href="/api/admin/export/json" download>⬇️ Download Backup (JSON)</a>
+            <a class="btn btn-primary btn-full" id="export-json" href="/api/admin/export/json" download>⬇️ Download Backup (JSON)</a>
             <p class="text-muted" style="font-size:12px;margin-top:4px;">Complete backup — best for re-importing or future analysis. Keep this safe.</p>
           </div>
           <div>
-            <a class="btn btn-success btn-full" href="/api/admin/export/csv" download>📊 Download Spreadsheet (Excel/CSV)</a>
+            <a class="btn btn-success btn-full" id="export-csv" href="/api/admin/export/csv" download>📊 Download Spreadsheet (Excel/CSV)</a>
             <p class="text-muted" style="font-size:12px;margin-top:4px;">Opens in Excel — one row per student, one column per question.</p>
           </div>
           <div>
@@ -154,6 +161,16 @@
 
       <div class="card guide" style="max-width:760px;">
         <p class="guide-intro">A simple guide to using this app. You can do everything yourself from any computer or phone — nothing needs to be installed.</p>
+
+        <div class="guide-highlight">
+          <h3 style="margin-top:0;">Two separate surveys</h3>
+          <p>At the top of the page there is a switch with two buttons:</p>
+          <ul>
+            <li><b>📋 Current Students</b> — for students who are enrolled now.</li>
+            <li><b>🎓 Graduates</b> — for students who have graduated (alumni).</li>
+          </ul>
+          <p>Each survey has its <b>own questions and its own student list</b>, and the two <b>never mix</b>. Pick the survey you want at the top first, then add students, copy links, or edit questions for that survey. The screen turns slightly green when you are in the Graduates survey, so you always know where you are.</p>
+        </div>
 
         <h3>1. The four tabs</h3>
         <ul>
@@ -398,7 +415,12 @@ let allQuestions = [];
 let editingStudentId = null;
 let editingQuestionId = null;
 let currentResponseData = null;
+let currentSurvey = 'current';   // 'current' (enrolled) or 'graduate' (alumni)
+let activeTab = 'students';
 const BASE_URL = window.location.origin;
+
+// append the active survey to an API url so the two surveys never mix
+const withSurvey = url => url + (url.includes('?') ? '&' : '?') + 'survey=' + currentSurvey;
 
 // ── Init ───────────────────────────────────────────────────────────────────
 (async () => {
@@ -406,6 +428,7 @@ const BASE_URL = window.location.origin;
     const me = await api('/api/admin/me');
     if (!me || me.error) { window.location.href = '/admin'; return; }
   } catch { window.location.href = '/admin'; return; }
+  updateExportLinks();
   await Promise.all([loadStudents(), loadQuestions()]);
   loadStats();
 })();
@@ -419,6 +442,7 @@ async function api(url, method = 'GET', body = null) {
 
 // ── Tab Switching ──────────────────────────────────────────────────────────
 function switchTab(tab) {
+  activeTab = tab;
   ['students','questions','settings','help'].forEach(t => {
     document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
     document.getElementById(`nav-${t}`)?.classList.toggle('active', t === tab);
@@ -428,9 +452,28 @@ function switchTab(tab) {
   if (tab === 'students') { loadStudents(); loadStats(); }
 }
 
+// ── Survey switch (Current students  /  Graduates) ───────────────────────────
+function setSurvey(s) {
+  currentSurvey = (s === 'graduate') ? 'graduate' : 'current';
+  document.getElementById('sw-current').classList.toggle('active', currentSurvey === 'current');
+  document.getElementById('sw-graduate').classList.toggle('active', currentSurvey === 'graduate');
+  document.body.classList.toggle('grad-mode', currentSurvey === 'graduate');
+  updateExportLinks();
+  loadStudents();
+  loadStats();
+  if (activeTab === 'questions') loadQuestions();
+}
+
+function updateExportLinks() {
+  const j = document.getElementById('export-json');
+  const c = document.getElementById('export-csv');
+  if (j) j.href = withSurvey('/api/admin/export/json');
+  if (c) c.href = withSurvey('/api/admin/export/csv');
+}
+
 // ── Stats ──────────────────────────────────────────────────────────────────
 async function loadStats() {
-  const s = await api('/api/admin/stats');
+  const s = await api(withSurvey('/api/admin/stats'));
   document.getElementById('stat-total').textContent = s.total;
   document.getElementById('stat-done').textContent  = s.completed;
   document.getElementById('stat-pend').textContent  = s.pending;
@@ -438,7 +481,7 @@ async function loadStats() {
 
 // ── Students ───────────────────────────────────────────────────────────────
 async function loadStudents() {
-  allStudents = await api('/api/admin/students');
+  allStudents = await api(withSurvey('/api/admin/students'));
   renderStudents(allStudents);
 }
 
@@ -536,7 +579,7 @@ async function saveStudent() {
 
   const url    = editingStudentId ? `/api/admin/students/${editingStudentId}` : '/api/admin/students';
   const method = editingStudentId ? 'PUT' : 'POST';
-  const data   = await api(url, method, { name, email, phone });
+  const data   = await api(url, method, { name, email, phone, survey: currentSurvey });
 
   btn.disabled = false;
   if (data.error) {
@@ -752,7 +795,7 @@ function buildStudentBlock(student, questions, answers) {
 
 // Print / Save-as-PDF for ALL completed students
 async function printAllResponses() {
-  const data = await api('/api/admin/export/all');
+  const data = await api(withSurvey('/api/admin/export/all'));
   if (data.error) { alert(data.error); return; }
   const completed = data.students.filter(s => s.completed);
   if (!completed.length) { alert('No completed surveys yet.'); return; }
@@ -774,7 +817,7 @@ async function printAllResponses() {
 
 // ── Questions ──────────────────────────────────────────────────────────────
 async function loadQuestions() {
-  allQuestions = await api('/api/admin/questions');
+  allQuestions = await api(withSurvey('/api/admin/questions'));
   renderQuestions();
   updateSectionDatalist();
 }
@@ -1089,7 +1132,7 @@ async function saveQuestion() {
 
   const url    = editingQuestionId ? `/api/admin/questions/${editingQuestionId}` : '/api/admin/questions';
   const method = editingQuestionId ? 'PUT' : 'POST';
-  const data   = await api(url, method, { section, label, type, options: options || null, placeholder: placeholder || null, required, order_num, active, depends_on, depends_value });
+  const data   = await api(url, method, { section, label, type, options: options || null, placeholder: placeholder || null, required, order_num, active, depends_on, depends_value, survey: currentSurvey });
 
   btn.disabled = false;
   if (data.error) {

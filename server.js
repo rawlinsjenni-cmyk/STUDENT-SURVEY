@@ -128,7 +128,7 @@ if (!data.questions.length) {
       id: data.nextQuestionId++, section, label, type,
       placeholder: placeholder || null, options: options || null,
       required: required ? 1 : 0, order_num, active: 1,
-      depends_on: null, depends_value: null
+      depends_on: null, depends_value: null, survey: 'current'
     });
   }
 }
@@ -153,12 +153,49 @@ if (!data.migrations.birthCertConditional) {
   }
   data.migrations.birthCertConditional = true;
 }
+
+// ── Two separate surveys: tag everything that has no survey as "current" ──────
+for (const q of data.questions) if (!q.survey) q.survey = 'current';
+for (const s of data.students)  if (!s.survey) s.survey = 'current';
+
+// Seed a starter "graduate" (alumni) survey — kept completely separate from the
+// current-students survey. The admin can fully customize these questions.
+if (!data.migrations.graduateSeed) {
+  if (!data.questions.some(q => q.survey === 'graduate')) {
+    const gseed = [
+      ['Graduate Info','Full Name','text','Enter your full name',null,1,1],
+      ['Graduate Info','Email Address','email','your@email.com',null,1,2],
+      ['Graduate Info','Phone Number','tel','(555) 555-5555',null,0,3],
+      ['Graduate Info','Graduation Date','date',null,null,0,4],
+      ['Employment','Are you currently employed?','yes_no',null,null,0,10],
+      ['Employment','Where do you work?','text','Employer name',null,0,11],
+      ['Follow-up','Would you like to stay in contact for alumni events?','yes_no',null,null,0,20],
+    ];
+    for (const [section,label,type,placeholder,options,required,order_num] of gseed) {
+      data.questions.push({
+        id: data.nextQuestionId++, section, label, type,
+        placeholder: placeholder || null, options: options || null,
+        required: required ? 1 : 0, order_num, active: 1,
+        depends_on: null, depends_value: null, survey: 'graduate'
+      });
+    }
+    // "Where do you work?" only shows if "Are you currently employed?" = Yes
+    const emp   = data.questions.find(q => q.survey === 'graduate' && q.label === 'Are you currently employed?');
+    const where = data.questions.find(q => q.survey === 'graduate' && q.label === 'Where do you work?');
+    if (emp && where) { where.depends_on = emp.id; where.depends_value = 'Yes'; }
+  }
+  data.migrations.graduateSeed = true;
+}
 }  // end seedAndMigrate
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const sortedQuestions = (activeOnly = false) =>
+// Survey type: 'current' (enrolled students) or 'graduate' (alumni). Kept separate.
+const normSurvey = s => (s === 'graduate' ? 'graduate' : 'current');
+
+const sortedQuestions = (activeOnly = false, survey = null) =>
   data.questions
-    .filter(q => !activeOnly || q.active)
+    .filter(q => (!activeOnly || q.active) &&
+                 (survey == null || normSurvey(q.survey) === survey))
     .sort((a, b) => (a.order_num - b.order_num) || (a.id - b.id));
 
 const findStudentByToken = t => data.students.find(s => s.token === t);
@@ -198,7 +235,7 @@ app.get('/api/survey/:token', (req, res) => {
   const student = findStudentByToken(req.params.token);
   if (!student) return res.status(404).json({ error: 'Survey link not found or expired.' });
 
-  const questions = sortedQuestions(true);
+  const questions = sortedQuestions(true, normSurvey(student.survey));
   const existing = {};
   if (student.completed) {
     data.responses
@@ -273,9 +310,11 @@ app.post('/api/admin/change-password', requireAdmin, (req, res) => {
 });
 
 // ── Admin Students ────────────────────────────────────────────────────────────
-app.get('/api/admin/students', requireAdmin, (_req, res) => {
-  const list = [...data.students].sort((a, b) =>
-    new Date(b.created_at) - new Date(a.created_at));
+app.get('/api/admin/students', requireAdmin, (req, res) => {
+  const survey = normSurvey(req.query.survey);
+  const list = data.students
+    .filter(s => normSurvey(s.survey) === survey)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   res.json(list);
 });
 
@@ -290,7 +329,8 @@ app.post('/api/admin/students', requireAdmin, (req, res) => {
     token: crypto.randomBytes(20).toString('hex'),
     completed: 0,
     completed_at: null,
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
+    survey: normSurvey(req.body.survey)
   };
   data.students.push(student);
   saveNow();
@@ -329,8 +369,8 @@ app.post('/api/admin/students/:id/reset', requireAdmin, (req, res) => {
 });
 
 // ── Admin Questions ───────────────────────────────────────────────────────────
-app.get('/api/admin/questions', requireAdmin, (_req, res) =>
-  res.json(sortedQuestions(false)));
+app.get('/api/admin/questions', requireAdmin, (req, res) =>
+  res.json(sortedQuestions(false, normSurvey(req.query.survey))));
 
 // Persist a new ordering. Body: { items: [{ id, section }, ...] } in desired order.
 // order_num is reassigned sequentially; section is updated so a question can also
@@ -363,7 +403,8 @@ app.post('/api/admin/questions', requireAdmin, (req, res) => {
     order_num: order_num || 999,
     active: 1,
     depends_on: depends_on ? Number(depends_on) : null,
-    depends_value: depends_on ? (depends_value || null) : null
+    depends_value: depends_on ? (depends_value || null) : null,
+    survey: normSurvey(req.body.survey)
   };
   data.questions.push(q);
   saveNow();
@@ -415,17 +456,20 @@ app.get('/api/admin/responses/:studentId', requireAdmin, (req, res) => {
   res.json({ student, responses });
 });
 
-app.get('/api/admin/stats', requireAdmin, (_req, res) => {
-  const total     = data.students.length;
-  const completed = data.students.filter(s => s.completed).length;
+app.get('/api/admin/stats', requireAdmin, (req, res) => {
+  const survey    = normSurvey(req.query.survey);
+  const list      = data.students.filter(s => normSurvey(s.survey) === survey);
+  const total     = list.length;
+  const completed = list.filter(s => s.completed).length;
   res.json({ total, completed, pending: total - completed });
 });
 
 // ── Data Export ───────────────────────────────────────────────────────────────
 // JSON: complete, machine-readable backup (best for re-import / future analysis)
-app.get('/api/admin/export/json', requireAdmin, (_req, res) => {
-  const questions = sortedQuestions(false);
-  const students = data.students.map(s => ({
+app.get('/api/admin/export/json', requireAdmin, (req, res) => {
+  const survey = normSurvey(req.query.survey);
+  const questions = sortedQuestions(false, survey);
+  const students = data.students.filter(s => normSurvey(s.survey) === survey).map(s => ({
     id: s.id, name: s.name, email: s.email, phone: s.phone,
     completed: !!s.completed, completed_at: s.completed_at, created_at: s.created_at,
     responses: data.responses
@@ -436,16 +480,17 @@ app.get('/api/admin/export/json', requireAdmin, (_req, res) => {
       })
   }));
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="survey-backup-${dateStamp()}.json"`);
-  res.send(JSON.stringify({ exportedAt: new Date().toISOString(), questions, students }, null, 2));
+  res.setHeader('Content-Disposition', `attachment; filename="${survey}-survey-backup-${dateStamp()}.json"`);
+  res.send(JSON.stringify({ survey, exportedAt: new Date().toISOString(), questions, students }, null, 2));
 });
 
 // CSV: one row per student, one column per question (opens in Excel)
-app.get('/api/admin/export/csv', requireAdmin, (_req, res) => {
-  const questions = sortedQuestions(false);
+app.get('/api/admin/export/csv', requireAdmin, (req, res) => {
+  const survey = normSurvey(req.query.survey);
+  const questions = sortedQuestions(false, survey);
   const header = ['Name', 'Email', 'Phone', 'Status', 'Submitted At', ...questions.map(q => q.label)];
   const lines = [header.map(csvCell).join(',')];
-  for (const s of data.students) {
+  for (const s of data.students.filter(s => normSurvey(s.survey) === survey)) {
     const ans = answersFor(s.id);
     const row = [
       s.name, s.email, s.phone || '',
@@ -457,14 +502,15 @@ app.get('/api/admin/export/csv', requireAdmin, (_req, res) => {
   }
   // BOM so Excel reads UTF-8 (Turkish characters) correctly
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="survey-responses-${dateStamp()}.csv"`);
+  res.setHeader('Content-Disposition', `attachment; filename="${survey}-survey-responses-${dateStamp()}.csv"`);
   res.send('﻿' + lines.join('\r\n'));
 });
 
 // Aggregate (used by the "Save All as PDF" feature in the browser)
-app.get('/api/admin/export/all', requireAdmin, (_req, res) => {
-  const questions = sortedQuestions(false);
-  const students = data.students.map(s => ({
+app.get('/api/admin/export/all', requireAdmin, (req, res) => {
+  const survey = normSurvey(req.query.survey);
+  const questions = sortedQuestions(false, survey);
+  const students = data.students.filter(s => normSurvey(s.survey) === survey).map(s => ({
     id: s.id, name: s.name, email: s.email, phone: s.phone,
     completed: !!s.completed, completed_at: s.completed_at,
     answers: answersFor(s.id)

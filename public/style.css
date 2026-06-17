@@ -333,6 +333,26 @@ tr:hover td { background: #fafafa; }
 /* Inactive question */
 .q-item.inactive { opacity: .45; }
 
+/* ── Survey switcher (Current students / Graduates) ── */
+.survey-switch {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: #fff; border: 1px solid var(--border); border-radius: 10px;
+  padding: 8px 12px; margin-bottom: 18px;
+}
+.survey-switch-label { font-size: 13px; color: var(--text-muted); font-weight: 600; margin-right: 2px; }
+.survey-btn {
+  border: 1px solid var(--border); background: #f7f7f7; color: var(--text);
+  padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;
+  transition: all .12s;
+}
+.survey-btn:hover { background: #efefef; }
+.survey-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+#sw-graduate.active { background: #1f7a5a; border-color: #1f7a5a; }  /* graduates = green */
+
+/* When managing graduates, tint the page accent so it's obvious which survey you're in */
+body.grad-mode .nav-item.active { border-left-color: #1f7a5a; }
+body.grad-mode .stat-num { /* keep numbers readable */ }
+
 /* ── Help / Guide page ── */
 .guide { line-height: 1.6; font-size: 14.5px; color: var(--text); }
 .guide .guide-intro { font-size: 15px; color: var(--text-muted); margin-bottom: 18px; }
